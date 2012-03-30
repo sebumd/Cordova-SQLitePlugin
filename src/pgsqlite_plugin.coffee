@@ -50,11 +50,17 @@ class root.PGSQLitePlugin
     
   executeSql: (sql, params, success, error) ->
     throw new Error "Cannot executeSql without a query" unless sql
-    opts = getOptions({ query: [sql].concat(params || []), path: @dbPath }, success, error)
+    successcb = (execres) ->
+      res =
+        item: (i) ->
+          execres[i]
+        length: execres.length
+      success(res)
+    opts = getOptions({ query: [sql].concat(params || []), path: @dbPath }, successcb, error)
     PhoneGap.exec("PGSQLitePlugin.backgroundExecuteSql", opts)
     return
 
-  transaction: (fn, success, error) ->
+  transaction: (fn, error, success) ->
     t = new root.PGSQLitePluginTransaction(@dbPath)
     fn(t)
     t.complete(success, error)
@@ -79,14 +85,28 @@ class root.PGSQLitePluginTransaction
     @executes = []
     
   executeSql: (sql, params, success, error) ->
-    @executes.push getOptions({ query: [sql].concat(params || []), path: @dbPath }, success, error)
+    txself = @
+    successcb = (execres) ->
+      res =
+        item: (i) ->
+          execres[i]
+        length: execres.length
+      success(txself, res)
+    errorcb = (res) ->
+      error(txself, res)
+    @executes.push getOptions({ query: [sql].concat(params || []), path: @dbPath }, successcb, errorcb)
     return
   
   complete: (success, error) ->
     throw new Error "Transaction already run" if @__completed
     @__completed = true
+    txself = @
+    successcb = (res) ->
+      success(txself, res)
+    errorcb = (res) ->
+      error(txself, res)
     begin_opts = getOptions({ query: [ "BEGIN;" ], path: @dbPath })
-    commit_opts = getOptions({ query: [ "COMMIT;" ], path: @dbPath }, success, error)
+    commit_opts = getOptions({ query: [ "COMMIT;" ], path: @dbPath }, successcb, errorcb)
     executes = [ begin_opts ].concat(@executes).concat([ commit_opts ])
     opts = { executes: executes }
     PhoneGap.exec("PGSQLitePlugin.backgroundExecuteSqlBatch", opts)

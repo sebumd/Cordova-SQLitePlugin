@@ -60,16 +60,26 @@
     };
 
     PGSQLitePlugin.prototype.executeSql = function(sql, params, success, error) {
-      var opts;
+      var opts, successcb;
       if (!sql) throw new Error("Cannot executeSql without a query");
+      successcb = function(execres) {
+        var res;
+        res = {
+          item: function(i) {
+            return execres[i];
+          },
+          length: execres.length
+        };
+        return success(res);
+      };
       opts = getOptions({
         query: [sql].concat(params || []),
         path: this.dbPath
-      }, success, error);
+      }, successcb, error);
       PhoneGap.exec("PGSQLitePlugin.backgroundExecuteSql", opts);
     };
 
-    PGSQLitePlugin.prototype.transaction = function(fn, success, error) {
+    PGSQLitePlugin.prototype.transaction = function(fn, error, success) {
       var t;
       t = new root.PGSQLitePluginTransaction(this.dbPath);
       fn(t);
@@ -110,16 +120,38 @@
     }
 
     PGSQLitePluginTransaction.prototype.executeSql = function(sql, params, success, error) {
+      var errorcb, successcb, txself;
+      txself = this;
+      successcb = function(execres) {
+        var res;
+        res = {
+          item: function(i) {
+            return execres[i];
+          },
+          length: execres.length
+        };
+        return success(txself, res);
+      };
+      errorcb = function(res) {
+        return error(txself, res);
+      };
       this.executes.push(getOptions({
         query: [sql].concat(params || []),
         path: this.dbPath
-      }, success, error));
+      }, successcb, errorcb));
     };
 
     PGSQLitePluginTransaction.prototype.complete = function(success, error) {
-      var begin_opts, commit_opts, executes, opts;
+      var begin_opts, commit_opts, errorcb, executes, opts, successcb, txself;
       if (this.__completed) throw new Error("Transaction already run");
       this.__completed = true;
+      txself = this;
+      successcb = function(res) {
+        return success(txself, res);
+      };
+      errorcb = function(res) {
+        return error(txself, res);
+      };
       begin_opts = getOptions({
         query: ["BEGIN;"],
         path: this.dbPath
@@ -127,7 +159,7 @@
       commit_opts = getOptions({
         query: ["COMMIT;"],
         path: this.dbPath
-      }, success, error);
+      }, successcb, errorcb);
       executes = [begin_opts].concat(this.executes).concat([commit_opts]);
       opts = {
         executes: executes
