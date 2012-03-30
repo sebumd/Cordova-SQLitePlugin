@@ -50,12 +50,17 @@ class root.PGSQLitePlugin
     
   executeSql: (sql, params, success, error) ->
     throw new Error "Cannot executeSql without a query" unless sql
-    successcb = (execres) ->
-      res =
-        item: (i) ->
-          execres[i]
-        length: execres.length
-      success(res)
+
+    successcb = null
+    if success
+      successcb = (execres) ->
+        saveres = execres
+        res =
+          item: (i) ->
+            saveres[i]
+          length: saveres.length
+        success(res)
+
     opts = getOptions({ query: [sql].concat(params || []), path: @dbPath }, successcb, error)
     PhoneGap.exec("PGSQLitePlugin.backgroundExecuteSql", opts)
     return
@@ -86,15 +91,24 @@ class root.PGSQLitePluginTransaction
     
   executeSql: (sql, params, success, error) ->
     txself = @
-    successcb = (execres) ->
-      res =
-        item: (i) ->
-          execres[i]
-        length: execres.length
-      success(txself, res)
-    errorcb = (res) ->
-      error(txself, res)
+
+    successcb = null
+    if success
+      successcb = (execres) ->
+        saveres = execres
+        res =
+          item: (i) ->
+            saveres[i]
+          length: saveres.length
+        success(txself, res)
+
+    errorcb = null
+    if error
+      errorcb = (res) ->
+        error(txself, res)
+
     @executes.push getOptions({ query: [sql].concat(params || []), path: @dbPath }, successcb, errorcb)
+
     return
   
   complete: (success, error) ->

@@ -62,16 +62,20 @@
     PGSQLitePlugin.prototype.executeSql = function(sql, params, success, error) {
       var opts, successcb;
       if (!sql) throw new Error("Cannot executeSql without a query");
-      successcb = function(execres) {
-        var res;
-        res = {
-          item: function(i) {
-            return execres[i];
-          },
-          length: execres.length
+      successcb = null;
+      if (success) {
+        successcb = function(execres) {
+          var res, saveres;
+          saveres = execres;
+          res = {
+            item: function(i) {
+              return saveres[i];
+            },
+            length: saveres.length
+          };
+          return success(res);
         };
-        return success(res);
-      };
+      }
       opts = getOptions({
         query: [sql].concat(params || []),
         path: this.dbPath
@@ -122,19 +126,26 @@
     PGSQLitePluginTransaction.prototype.executeSql = function(sql, params, success, error) {
       var errorcb, successcb, txself;
       txself = this;
-      successcb = function(execres) {
-        var res;
-        res = {
-          item: function(i) {
-            return execres[i];
-          },
-          length: execres.length
+      successcb = null;
+      if (success) {
+        successcb = function(execres) {
+          var res, saveres;
+          saveres = execres;
+          res = {
+            item: function(i) {
+              return saveres[i];
+            },
+            length: saveres.length
+          };
+          return success(txself, res);
         };
-        return success(txself, res);
-      };
-      errorcb = function(res) {
-        return error(txself, res);
-      };
+      }
+      errorcb = null;
+      if (error) {
+        errorcb = function(res) {
+          return error(txself, res);
+        };
+      }
       this.executes.push(getOptions({
         query: [sql].concat(params || []),
         path: this.dbPath
