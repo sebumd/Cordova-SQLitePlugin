@@ -255,6 +255,8 @@ In case problems I hope the unit tests can help us to reproduce, demonstrate, an
 
 From [#10](https://github.com/chbrody/Cordova-SQLitePlugin/issues/10): [excellent directions for the Android version](http://www.raymondcamden.com/index.cfm/2012/7/27/Guest-Blog-Post-Shipping-a-populated-SQLite-DB-with-PhoneGap) have been posted recently, directions needed for iOS version. [General directions for Cordova/PhoneGap](http://gauravstomar.blogspot.com/2011/08/prepopulate-sqlite-in-phonegap.html) had been posted but seems out-of-date and does not specifically apply for this plugin.
 
+Here is a full tutorial about how I was able to use a pre-populated DB with SQLite, This plugin, and PhoneGap.  Enjoy!  I hope this helps someone. (http://www.corporatezen.com/shipping_prepopulated_database_with_phonegap)
+
 Extra Usage
 ===========
 
